@@ -8,11 +8,11 @@ import { sanitizeSessionHistory } from "./pi-embedded-runner/google.js";
 import { castAgentMessage } from "./test-helpers/agent-message-fixtures.js";
 
 describe("sanitizeSessionHistory openai tool id preservation", () => {
-  const makeSessionManager = () =>
+  const makeSessionManager = (params?: { provider?: string; modelApi?: string }) =>
     makeInMemorySessionManager([
       makeModelSnapshotEntry({
-        provider: "openai",
-        modelApi: "openai-responses",
+        provider: params?.provider ?? "openai",
+        modelApi: params?.modelApi ?? "openai-responses",
         modelId: "gpt-5.2-codex",
       }),
     ]);
@@ -44,22 +44,40 @@ describe("sanitizeSessionHistory openai tool id preservation", () => {
 
   it.each([
     {
+      provider: "openai",
+      modelApi: "openai-responses",
       name: "strips fc ids when replayable reasoning metadata is missing",
       withReasoning: false,
       expectedToolId: "call_123",
     },
     {
+      provider: "openai",
+      modelApi: "openai-responses",
       name: "keeps canonical call_id|fc_id pairings when replayable reasoning is present",
       withReasoning: true,
       expectedToolId: "call_123|fc_123",
     },
-  ])("$name", async ({ withReasoning, expectedToolId }) => {
+    {
+      provider: "azure-openai-responses",
+      modelApi: "azure-openai-responses",
+      name: "strips fc ids for azure-openai-responses when replayable reasoning metadata is missing",
+      withReasoning: false,
+      expectedToolId: "call_123",
+    },
+    {
+      provider: "azure-openai-responses",
+      modelApi: "azure-openai-responses",
+      name: "keeps canonical call_id|fc_id pairings for azure-openai-responses when replayable reasoning is present",
+      withReasoning: true,
+      expectedToolId: "call_123|fc_123",
+    },
+  ])("$name", async ({ provider, modelApi, withReasoning, expectedToolId }) => {
     const result = await sanitizeSessionHistory({
       messages: makeMessages(withReasoning),
-      modelApi: "openai-responses",
-      provider: "openai",
+      modelApi,
+      provider,
       modelId: "gpt-5.2-codex",
-      sessionManager: makeSessionManager(),
+      sessionManager: makeSessionManager({ provider, modelApi }),
       sessionId: "test-session",
     });
 

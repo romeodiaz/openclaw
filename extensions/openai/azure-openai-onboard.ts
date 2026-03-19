@@ -8,6 +8,7 @@ import {
 export const AZURE_OPENAI_PROVIDER_ID = "azure-openai-responses";
 export const AZURE_OPENAI_PROFILE_ID = `${AZURE_OPENAI_PROVIDER_ID}:default`;
 export const AZURE_OPENAI_API_VERSION_PARAM = "azureApiVersion";
+export const AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM = "azureUnderlyingModelId";
 export const AZURE_OPENAI_DEFAULT_API_VERSION = "v1";
 
 const AZURE_OPENAI_ALLOWED_HOST_SUFFIXES = [
@@ -27,6 +28,7 @@ type AzureOpenAIConfigParams = {
   baseUrl: string;
   modelId: string;
   apiVersion?: string;
+  underlyingModelId?: string;
 };
 
 type AgentModelParams = Record<string, unknown>;
@@ -42,6 +44,11 @@ function normalizeAzureApiVersion(value: string | undefined): string | undefined
     return undefined;
   }
   return trimmed;
+}
+
+function normalizeOptionalAzureOpenAIModelId(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? normalizeAzureOpenAIModelId(trimmed) : undefined;
 }
 
 function normalizeAzurePath(pathname: string): string {
@@ -112,38 +119,100 @@ function isVisionCapableModel(modelId: string): boolean {
   );
 }
 
-export function buildAzureOpenAIModelDefinition(modelId: string): ModelDefinitionConfig {
-  const normalizedModelId = normalizeAzureOpenAIModelId(modelId);
-  const reasoning = isReasoningModel(normalizedModelId);
-  const input = isVisionCapableModel(normalizedModelId)
+function looksLikeAzureCapabilityModelId(modelId: string): boolean {
+  const normalized = modelId.trim().toLowerCase();
+  return (
+    normalized.startsWith("gpt-") ||
+    normalized.startsWith("o1") ||
+    normalized.startsWith("o3") ||
+    normalized.startsWith("o4")
+  );
+}
+
+export function resolveAzureOpenAICapabilityModelId(params: {
+  modelId: string;
+  underlyingModelId?: string;
+}): string | undefined {
+  const explicit = normalizeOptionalAzureOpenAIModelId(params.underlyingModelId);
+  if (explicit) {
+    return explicit;
+  }
+  const deploymentName = normalizeOptionalAzureOpenAIModelId(params.modelId);
+  if (!deploymentName) {
+    return undefined;
+  }
+  return looksLikeAzureCapabilityModelId(deploymentName) ? deploymentName : undefined;
+}
+
+function resolveAzureOpenAIModelCapabilities(params: {
+  modelId: string;
+  underlyingModelId?: string;
+}) {
+  const capabilityModelId = resolveAzureOpenAICapabilityModelId(params);
+  if (!capabilityModelId) {
+    return {
+      capabilityModelId: undefined,
+      reasoning: true,
+      input: ["text", "image"] as Array<"text" | "image">,
+      contextWindow: 1_050_000,
+      maxTokens: 128_000,
+    };
+  }
+
+  const reasoning = isReasoningModel(capabilityModelId);
+  const input = isVisionCapableModel(capabilityModelId)
     ? (["text", "image"] as Array<"text" | "image">)
     : (["text"] as Array<"text" | "image">);
+
+  return {
+    capabilityModelId,
+    reasoning,
+    input,
+    contextWindow: reasoning ? 1_050_000 : 200_000,
+    maxTokens: reasoning ? 128_000 : 16_384,
+  };
+}
+
+export function buildAzureOpenAIModelDefinition(params: {
+  modelId: string;
+  underlyingModelId?: string;
+}): ModelDefinitionConfig {
+  const normalizedModelId = normalizeAzureOpenAIModelId(params.modelId);
+  const capabilities = resolveAzureOpenAIModelCapabilities(params);
 
   return {
     id: normalizedModelId,
     name: normalizedModelId,
     api: "azure-openai-responses",
-    reasoning,
-    input,
+    reasoning: capabilities.reasoning,
+    input: capabilities.input,
     cost: DEFAULT_COST,
-    contextWindow: reasoning ? 1_050_000 : 200_000,
-    maxTokens: reasoning ? 128_000 : 16_384,
-    compat: {
-      supportsStore: false,
-    },
+    contextWindow: capabilities.contextWindow,
+    maxTokens: capabilities.maxTokens,
   };
 }
 
 function mergeAzureAgentModelParams(
   existing: AgentModelParams | undefined,
   apiVersion: string | undefined,
+  underlyingModelId: string | undefined,
+  deploymentName: string,
 ): AgentModelParams | undefined {
   const next = { ...(existing ?? {}) };
   const normalizedApiVersion = normalizeAzureApiVersion(apiVersion);
+  const normalizedUnderlyingModelId = normalizeOptionalAzureOpenAIModelId(underlyingModelId);
   if (normalizedApiVersion) {
     next[AZURE_OPENAI_API_VERSION_PARAM] = normalizedApiVersion;
   } else {
     delete next[AZURE_OPENAI_API_VERSION_PARAM];
+  }
+  if (
+    normalizedUnderlyingModelId &&
+    normalizedUnderlyingModelId !== normalizeAzureOpenAIModelId(deploymentName)
+  ) {
+    next[AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM] = normalizedUnderlyingModelId;
+  } else {
+    delete next[AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM];
   }
   return Object.keys(next).length > 0 ? next : undefined;
 }
@@ -155,10 +224,18 @@ export function applyAzureOpenAIProviderConfig(
   const baseUrl = normalizeAzureOpenAIBaseUrl(params.baseUrl);
   const modelId = normalizeAzureOpenAIModelId(params.modelId);
   const modelRef = `${AZURE_OPENAI_PROVIDER_ID}/${modelId}`;
-  const defaultModel = buildAzureOpenAIModelDefinition(modelId);
+  const defaultModel = buildAzureOpenAIModelDefinition({
+    modelId,
+    underlyingModelId: params.underlyingModelId,
+  });
   const agentModels = { ...cfg.agents?.defaults?.models };
   const existingAgentModel = agentModels[modelRef];
-  const mergedParams = mergeAzureAgentModelParams(existingAgentModel?.params, params.apiVersion);
+  const mergedParams = mergeAzureAgentModelParams(
+    existingAgentModel?.params,
+    params.apiVersion,
+    params.underlyingModelId,
+    modelId,
+  );
 
   agentModels[modelRef] = {
     ...existingAgentModel,

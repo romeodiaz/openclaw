@@ -10,6 +10,11 @@ type OpenAIReasoningEffort = "low" | "medium" | "high";
 
 const OPENAI_RESPONSES_APIS = new Set(["openai-responses", "azure-openai-responses"]);
 const OPENAI_RESPONSES_PROVIDERS = new Set(["openai", "azure-openai", "azure-openai-responses"]);
+const DIRECT_AZURE_OPENAI_HOST_SUFFIXES = [
+  ".openai.azure.com",
+  ".services.ai.azure.com",
+  ".cognitiveservices.azure.com",
+] as const;
 
 function isDirectOpenAIBaseUrl(baseUrl: unknown): boolean {
   if (typeof baseUrl !== "string" || !baseUrl.trim()) {
@@ -19,14 +24,16 @@ function isDirectOpenAIBaseUrl(baseUrl: unknown): boolean {
   try {
     const host = new URL(baseUrl).hostname.toLowerCase();
     return (
-      host === "api.openai.com" || host === "chatgpt.com" || host.endsWith(".openai.azure.com")
+      host === "api.openai.com" ||
+      host === "chatgpt.com" ||
+      DIRECT_AZURE_OPENAI_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))
     );
   } catch {
     const normalized = baseUrl.toLowerCase();
     return (
       normalized.includes("api.openai.com") ||
       normalized.includes("chatgpt.com") ||
-      normalized.includes(".openai.azure.com")
+      DIRECT_AZURE_OPENAI_HOST_SUFFIXES.some((suffix) => normalized.includes(suffix))
     );
   }
 }

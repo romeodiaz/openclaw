@@ -120,6 +120,7 @@ export type OnboardOptions = {
   azureOpenaiApiKey?: string;
   azureOpenaiBaseUrl?: string;
   azureOpenaiModelId?: string;
+  azureOpenaiUnderlyingModelId?: string;
   azureOpenaiApiVersion?: string;
   mistralApiKey?: string;
   openrouterApiKey?: string;

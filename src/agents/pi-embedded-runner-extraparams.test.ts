@@ -1715,6 +1715,37 @@ describe("applyExtraParamsToAgent", () => {
     expect(payload.store).toBe(true);
   });
 
+  it("forces store=true for azure-openai-responses API models on Azure OpenAI hosts", () => {
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "azure-openai-responses",
+      applyModelId: "gpt-5.4",
+      model: {
+        api: "azure-openai-responses",
+        provider: "azure-openai-responses",
+        id: "gpt-5.4",
+        baseUrl: "https://example.openai.azure.com/openai/v1",
+      } as unknown as Model<"openai-responses">,
+    });
+    expect(payload.store).toBe(true);
+  });
+
+  it.each([
+    "https://example.services.ai.azure.com/openai/v1",
+    "https://example.cognitiveservices.azure.com/openai/v1",
+  ])("forces store=true for Azure AI Foundry host %s", (baseUrl) => {
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "azure-openai-responses",
+      applyModelId: "gpt-5.4",
+      model: {
+        api: "azure-openai-responses",
+        provider: "azure-openai-responses",
+        id: "gpt-5.4",
+        baseUrl,
+      } as unknown as Model<"openai-responses">,
+    });
+    expect(payload.store).toBe(true);
+  });
+
   it("injects configured OpenAI service_tier into Responses payloads", () => {
     const payload = runResponsesPayloadMutationCase({
       applyProvider: "openai",
