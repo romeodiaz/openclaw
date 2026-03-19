@@ -19,7 +19,7 @@ import type { SecretInputMode } from "./onboard-types.js";
 
 const DEFAULT_CONTEXT_WINDOW = CONTEXT_WINDOW_HARD_MIN_TOKENS;
 const DEFAULT_MAX_TOKENS = 4096;
-// Azure OpenAI uses the Responses API which supports larger defaults
+// Azure OpenAI uses the Responses API which supports larger defaults.
 const AZURE_DEFAULT_CONTEXT_WINDOW = 400_000;
 const AZURE_DEFAULT_MAX_TOKENS = 16_384;
 const VERIFY_TIMEOUT_MS = 30_000;
@@ -84,7 +84,7 @@ function transformAzureConfigUrl(baseUrl: string): string {
   if (normalizedUrl.endsWith("/openai/v1")) {
     return normalizedUrl;
   }
-  // Strip a full deployment path back to the base origin
+  // Strip a full deployment path back to the base origin.
   const deploymentIdx = normalizedUrl.indexOf("/openai/deployments/");
   const base = deploymentIdx !== -1 ? normalizedUrl.slice(0, deploymentIdx) : normalizedUrl;
   return `${base}/openai/v1`;
