@@ -38,14 +38,12 @@ export function inferAuthChoiceFromFlags(opts: OnboardOptions): AuthChoiceInfere
   if (
     hasStringValue(opts.azureOpenaiBaseUrl) ||
     hasStringValue(opts.azureOpenaiModelId) ||
-    hasStringValue(opts.azureOpenaiUnderlyingModelId) ||
     hasStringValue(opts.azureOpenaiApiVersion)
   ) {
     matches.push({
       optionKey: "azureOpenaiBaseUrl",
       authChoice: "azure-openai-api-key",
-      label:
-        "--azure-openai-base-url/--azure-openai-model-id[/--azure-openai-underlying-model-id][--azure-openai-api-version]",
+      label: "--azure-openai-base-url/--azure-openai-model-id[/--azure-openai-api-version]",
     });
   }
 

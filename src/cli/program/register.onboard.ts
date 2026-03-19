@@ -101,10 +101,6 @@ export function registerOnboardCommand(program: Command) {
     .option("--azure-openai-base-url <url>", "Azure OpenAI base URL")
     .option("--azure-openai-model-id <id>", "Azure OpenAI deployment name")
     .option(
-      "--azure-openai-underlying-model-id <id>",
-      "Azure OpenAI underlying model ID (optional; used for capabilities)",
-    )
-    .option(
       "--azure-openai-api-version <version>",
       "Azure OpenAI API version override (default: v1)",
     )
@@ -175,7 +171,6 @@ export function registerOnboardCommand(program: Command) {
           ...providerAuthOptionValues,
           azureOpenaiBaseUrl: opts.azureOpenaiBaseUrl as string | undefined,
           azureOpenaiModelId: opts.azureOpenaiModelId as string | undefined,
-          azureOpenaiUnderlyingModelId: opts.azureOpenaiUnderlyingModelId as string | undefined,
           azureOpenaiApiVersion: opts.azureOpenaiApiVersion as string | undefined,
           cloudflareAiGatewayAccountId: opts.cloudflareAiGatewayAccountId as string | undefined,
           cloudflareAiGatewayGatewayId: opts.cloudflareAiGatewayGatewayId as string | undefined,

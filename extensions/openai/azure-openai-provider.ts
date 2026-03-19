@@ -3,7 +3,6 @@ import {
   type ProviderAuthContext,
   type ProviderAuthMethod,
   type ProviderAuthMethodNonInteractiveContext,
-  type ProviderRuntimeModel,
 } from "openclaw/plugin-sdk/core";
 import {
   applyAuthProfileConfig,
@@ -21,12 +20,10 @@ import {
   AZURE_OPENAI_DEFAULT_API_VERSION,
   AZURE_OPENAI_PROFILE_ID,
   AZURE_OPENAI_PROVIDER_ID,
-  AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM,
   applyAzureOpenAIConfig,
   buildAzureOpenAIModelDefinition,
   normalizeAzureOpenAIBaseUrl,
   normalizeAzureOpenAIModelId,
-  resolveAzureOpenAICapabilityModelId,
 } from "./azure-openai-onboard.js";
 
 const PROVIDER_LABEL = "Azure OpenAI";
@@ -36,19 +33,16 @@ type AzureOpenAISetupInput = {
   baseUrl: string;
   modelId: string;
   apiVersion?: string;
-  underlyingModelId?: string;
 };
 
 function normalizeAzureOpenAIInput(params: AzureOpenAISetupInput): AzureOpenAISetupInput {
   const baseUrl = normalizeAzureOpenAIBaseUrl(params.baseUrl);
   const modelId = normalizeAzureOpenAIModelId(params.modelId);
   const apiVersion = normalizeOptionalSecretInput(params.apiVersion);
-  const underlyingModelId = normalizeOptionalSecretInput(params.underlyingModelId);
   return {
     baseUrl,
     modelId,
     ...(apiVersion ? { apiVersion } : {}),
-    ...(underlyingModelId ? { underlyingModelId } : {}),
   };
 }
 
@@ -58,14 +52,9 @@ async function promptForAzureOpenAIInput(ctx: ProviderAuthContext): Promise<Azur
     typeof existingProvider?.baseUrl === "string" ? existingProvider.baseUrl : undefined;
   const existingModelId =
     typeof existingProvider?.models?.[0]?.id === "string" ? existingProvider.models[0].id : "";
-  const existingModelParams = ctx.config.agents?.defaults?.models?.[
-    `${AZURE_OPENAI_PROVIDER_ID}/${existingModelId}`
-  ]?.params as Record<string, unknown> | undefined;
   const existingApiVersion = normalizeOptionalSecretInput(
-    existingModelParams?.[AZURE_OPENAI_API_VERSION_PARAM],
-  );
-  const existingUnderlyingModelId = normalizeOptionalSecretInput(
-    existingModelParams?.[AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM],
+    ctx.config.agents?.defaults?.models?.[`${AZURE_OPENAI_PROVIDER_ID}/${existingModelId}`]
+      ?.params?.[AZURE_OPENAI_API_VERSION_PARAM],
   );
 
   const baseUrlInput = await ctx.prompter.text({
@@ -112,36 +101,10 @@ async function promptForAzureOpenAIInput(ctx: ProviderAuthContext): Promise<Azur
     validate: () => undefined,
   });
 
-  const underlyingModelIdInput = await ctx.prompter.text({
-    message: "Azure underlying model ID (optional)",
-    initialValue:
-      normalizeOptionalSecretInput(ctx.opts?.azureOpenaiUnderlyingModelId) ??
-      existingUnderlyingModelId ??
-      resolveAzureOpenAICapabilityModelId({
-        modelId:
-          normalizeOptionalSecretInput(ctx.opts?.azureOpenaiModelId) ?? existingModelId ?? "",
-      }) ??
-      "",
-    placeholder: "gpt-5.4",
-    validate: (value) => {
-      const normalized = normalizeOptionalSecretInput(String(value ?? ""));
-      if (!normalized) {
-        return undefined;
-      }
-      try {
-        normalizeAzureOpenAIModelId(normalized);
-        return undefined;
-      } catch (error) {
-        return error instanceof Error ? error.message : String(error);
-      }
-    },
-  });
-
   return normalizeAzureOpenAIInput({
     baseUrl: String(baseUrlInput ?? ""),
     modelId: String(modelIdInput ?? ""),
     apiVersion: String(apiVersionInput ?? ""),
-    underlyingModelId: String(underlyingModelIdInput ?? ""),
   });
 }
 
@@ -222,7 +185,6 @@ async function runAzureOpenAIApiKeyAuthNonInteractive(
       baseUrl: baseUrl ?? "",
       modelId: modelId ?? "",
       apiVersion: normalizeOptionalSecretInput(ctx.opts.azureOpenaiApiVersion),
-      underlyingModelId: normalizeOptionalSecretInput(ctx.opts.azureOpenaiUnderlyingModelId),
     });
 
     const resolved = await ctx.resolveApiKey({
@@ -285,64 +247,22 @@ function buildAzureOpenAIApiKeyMethod(): ProviderAuthMethod {
 function createAzureOpenAIStreamWrapper(
   baseStreamFn: StreamFn | undefined,
   extraParams: Record<string, unknown> | undefined,
-  deploymentName: string,
 ): StreamFn | undefined {
+  const azureApiVersion = normalizeOptionalSecretInput(
+    extraParams?.[AZURE_OPENAI_API_VERSION_PARAM],
+  );
+  if (!azureApiVersion) {
+    return baseStreamFn;
+  }
   const underlying = baseStreamFn;
   if (!underlying) {
     return undefined;
   }
-  const azureApiVersion = normalizeOptionalSecretInput(
-    extraParams?.[AZURE_OPENAI_API_VERSION_PARAM],
-  );
   return (model, context, options) =>
     underlying(model, context, {
       ...options,
-      azureDeploymentName: deploymentName,
-      ...(azureApiVersion ? { azureApiVersion } : {}),
+      azureApiVersion,
     } as typeof options);
-}
-
-function normalizeAzureResolvedModel(params: {
-  config:
-    | ProviderAuthContext["config"]
-    | ProviderAuthMethodNonInteractiveContext["config"]
-    | undefined;
-  deploymentName: string;
-  model: ProviderRuntimeModel;
-}) {
-  const explicitUnderlyingModelId = normalizeOptionalSecretInput(
-    params.config?.agents?.defaults?.models?.[
-      `${AZURE_OPENAI_PROVIDER_ID}/${params.deploymentName}`
-    ]?.params?.[AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM],
-  );
-  const capabilityModelId = resolveAzureOpenAICapabilityModelId({
-    modelId: params.deploymentName,
-    underlyingModelId: explicitUnderlyingModelId,
-  });
-  const normalizedRuntimeModel = buildAzureOpenAIModelDefinition({
-    modelId: capabilityModelId ?? params.deploymentName,
-  });
-  const nextModel: ProviderRuntimeModel = {
-    ...params.model,
-    id: capabilityModelId ?? params.model.id,
-    name: capabilityModelId ?? params.model.name,
-    reasoning: normalizedRuntimeModel.reasoning,
-    input: normalizedRuntimeModel.input,
-    contextWindow: normalizedRuntimeModel.contextWindow,
-    maxTokens: normalizedRuntimeModel.maxTokens,
-  };
-
-  if (
-    nextModel.id === params.model.id &&
-    nextModel.name === params.model.name &&
-    nextModel.reasoning === params.model.reasoning &&
-    JSON.stringify(nextModel.input) === JSON.stringify(params.model.input) &&
-    nextModel.contextWindow === params.model.contextWindow &&
-    nextModel.maxTokens === params.model.maxTokens
-  ) {
-    return undefined;
-  }
-  return nextModel;
 }
 
 function buildCatalogProvider(
@@ -356,7 +276,7 @@ function buildCatalogProvider(
     apiKey,
     models: Array.isArray(existingProvider.models)
       ? existingProvider.models
-      : [buildAzureOpenAIModelDefinition({ modelId: "gpt-5.4" })],
+      : [buildAzureOpenAIModelDefinition("gpt-5.4")],
     authHeader: existingProvider.authHeader ?? false,
   };
 }
@@ -382,16 +302,9 @@ export function buildAzureOpenAIProviderPlugin(): ProviderPlugin {
         };
       },
     },
-    normalizeResolvedModel: (ctx) =>
-      normalizeAzureResolvedModel({
-        config: ctx.config,
-        deploymentName: ctx.modelId,
-        model: ctx.model,
-      }),
     capabilities: {
       providerFamily: "openai" as const,
     },
-    wrapStreamFn: (ctx) =>
-      createAzureOpenAIStreamWrapper(ctx.streamFn, ctx.extraParams, ctx.modelId),
+    wrapStreamFn: (ctx) => createAzureOpenAIStreamWrapper(ctx.streamFn, ctx.extraParams),
   };
 }

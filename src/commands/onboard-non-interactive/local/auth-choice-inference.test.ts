@@ -33,16 +33,14 @@ describe("inferAuthChoiceFromFlags", () => {
   it("infers Azure OpenAI from Azure-specific onboarding flags", () => {
     const result = inferAuthChoiceFromFlags({
       azureOpenaiBaseUrl: "https://example.openai.azure.com",
-      azureOpenaiModelId: "prod-chat",
-      azureOpenaiUnderlyingModelId: "gpt-5.4",
+      azureOpenaiModelId: "gpt-5.4",
     } as never);
 
     expect(result.choice).toBe("azure-openai-api-key");
     expect(result.matches).toContainEqual({
       optionKey: "azureOpenaiBaseUrl",
       authChoice: "azure-openai-api-key",
-      label:
-        "--azure-openai-base-url/--azure-openai-model-id[/--azure-openai-underlying-model-id][--azure-openai-api-version]",
+      label: "--azure-openai-base-url/--azure-openai-model-id[/--azure-openai-api-version]",
     });
   });
 

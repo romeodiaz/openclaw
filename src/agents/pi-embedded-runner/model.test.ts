@@ -1002,57 +1002,6 @@ describe("resolveModel", () => {
     );
   });
 
-  it("normalizes Azure deployment refs to the configured underlying model", () => {
-    const cfg = {
-      agents: {
-        defaults: {
-          models: {
-            "azure-openai-responses/prod-chat": {
-              params: {
-                azureUnderlyingModelId: "gpt-5.4",
-              },
-            },
-          },
-        },
-      },
-      models: {
-        providers: {
-          "azure-openai-responses": {
-            baseUrl: "https://example.openai.azure.com/openai/v1",
-            api: "azure-openai-responses",
-            models: [
-              {
-                id: "prod-chat",
-                name: "prod-chat",
-                api: "azure-openai-responses",
-                reasoning: false,
-                input: ["text"],
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                contextWindow: 200_000,
-                maxTokens: 16_384,
-              },
-            ],
-          },
-        },
-      },
-    } as unknown as OpenClawConfig;
-
-    const result = resolveModel("azure-openai-responses", "prod-chat", "/tmp/agent", cfg);
-
-    expect(result.error).toBeUndefined();
-    expect(result.model).toMatchObject({
-      provider: "azure-openai-responses",
-      api: "azure-openai-responses",
-      id: "gpt-5.4",
-      name: "gpt-5.4",
-      reasoning: true,
-      input: ["text", "image"],
-      baseUrl: "https://example.openai.azure.com/openai/v1",
-      contextWindow: 1_050_000,
-      maxTokens: 128_000,
-    });
-  });
-
   it("uses codex fallback even when openai-codex provider is configured", () => {
     // This test verifies the ordering: codex fallback must fire BEFORE the generic providerCfg fallback.
     // If ordering is wrong, the generic fallback would use api: "openai-responses" (the default)

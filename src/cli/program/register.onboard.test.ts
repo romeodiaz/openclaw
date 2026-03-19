@@ -157,8 +157,6 @@ describe("registerOnboardCommand", () => {
       "--azure-openai-base-url",
       "https://example.openai.azure.com",
       "--azure-openai-model-id",
-      "prod-chat",
-      "--azure-openai-underlying-model-id",
       "gpt-5.4",
       "--azure-openai-api-version",
       "2025-04-01-preview",
@@ -167,8 +165,7 @@ describe("registerOnboardCommand", () => {
       expect.objectContaining({
         azureOpenaiApiKey: "sk-azure-test", // pragma: allowlist secret
         azureOpenaiBaseUrl: "https://example.openai.azure.com",
-        azureOpenaiModelId: "prod-chat",
-        azureOpenaiUnderlyingModelId: "gpt-5.4",
+        azureOpenaiModelId: "gpt-5.4",
         azureOpenaiApiVersion: "2025-04-01-preview",
       }),
       runtime,

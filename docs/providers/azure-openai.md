@@ -72,9 +72,6 @@ openclaw onboard \
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 1050000,
             maxTokens: 128000,
-            compat: {
-              supportsStore: false,
-            },
           },
         ],
       },
@@ -86,6 +83,7 @@ openclaw onboard \
 ## Notes
 
 - The model ID should normally be your Azure deployment name.
+- For now, deployment names that match the model family, such as `gpt-5.4`, work best for capability detection.
 - OpenClaw normalizes Azure resource URLs to the native `/openai/v1` endpoint.
 - Azure OpenAI uses the Azure Responses transport, not the generic
   `openai-completions` custom-provider path.

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   AZURE_OPENAI_API_VERSION_PARAM,
-  AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM,
   applyAzureOpenAIConfig,
   normalizeAzureOpenAIBaseUrl,
 } from "./azure-openai-onboard.js";
@@ -54,41 +53,14 @@ describe("azure-openai-onboard", () => {
         expect.objectContaining({
           id: "gpt-5.4",
           api: "azure-openai-responses",
+          reasoning: true,
+          input: ["text", "image"],
         }),
       ]);
       expect(next.agents?.defaults?.models?.["azure-openai-responses/gpt-5.4"]).toEqual({
         alias: "Azure OpenAI",
         params: {
           [AZURE_OPENAI_API_VERSION_PARAM]: "2025-04-01-preview",
-        },
-      });
-    });
-
-    it("stores the underlying model separately from the deployment name", () => {
-      const next = applyAzureOpenAIConfig(
-        {},
-        {
-          baseUrl: "https://example.openai.azure.com",
-          modelId: "prod-chat",
-          underlyingModelId: "gpt-5.4",
-        },
-      );
-
-      expect(next.agents?.defaults?.model).toEqual({
-        primary: "azure-openai-responses/prod-chat",
-      });
-      expect(next.models?.providers?.["azure-openai-responses"]?.models).toEqual([
-        expect.objectContaining({
-          id: "prod-chat",
-          api: "azure-openai-responses",
-          reasoning: true,
-          input: ["text", "image"],
-        }),
-      ]);
-      expect(next.agents?.defaults?.models?.["azure-openai-responses/prod-chat"]).toEqual({
-        alias: "Azure OpenAI",
-        params: {
-          [AZURE_OPENAI_UNDERLYING_MODEL_ID_PARAM]: "gpt-5.4",
         },
       });
     });
@@ -106,26 +78,6 @@ describe("azure-openai-onboard", () => {
       expect(next.agents?.defaults?.models?.["azure-openai-responses/gpt-5.4"]).toEqual({
         alias: "Azure OpenAI",
       });
-    });
-
-    it("uses broad defaults when the deployment name is not a model family", () => {
-      const next = applyAzureOpenAIConfig(
-        {},
-        {
-          baseUrl: "https://example.openai.azure.com",
-          modelId: "prod-chat",
-        },
-      );
-
-      expect(next.models?.providers?.["azure-openai-responses"]?.models).toEqual([
-        expect.objectContaining({
-          id: "prod-chat",
-          reasoning: true,
-          input: ["text", "image"],
-          contextWindow: 1_050_000,
-          maxTokens: 128_000,
-        }),
-      ]);
     });
   });
 });
