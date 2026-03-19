@@ -35,6 +35,7 @@ const OPENAI_MODEL_APIS = new Set([
   "openai",
   "openai-completions",
   "openai-responses",
+  "azure-openai-responses",
   "openai-codex-responses",
 ]);
 
@@ -81,7 +82,9 @@ export function resolveTranscriptPolicy(params: {
   const requiresOpenAiCompatibleToolIdSanitization =
     params.modelApi === "openai-completions" ||
     (!isOpenAi &&
-      (params.modelApi === "openai-responses" || params.modelApi === "openai-codex-responses"));
+      (params.modelApi === "openai-responses" ||
+        params.modelApi === "azure-openai-responses" ||
+        params.modelApi === "openai-codex-responses"));
 
   // Anthropic Claude endpoints can reject replayed `thinking` blocks unless the
   // original signatures are preserved byte-for-byte. Drop them at send-time to

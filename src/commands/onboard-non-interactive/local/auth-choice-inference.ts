@@ -36,6 +36,18 @@ export function inferAuthChoiceFromFlags(opts: OnboardOptions): AuthChoiceInfere
     }));
 
   if (
+    hasStringValue(opts.azureOpenaiBaseUrl) ||
+    hasStringValue(opts.azureOpenaiModelId) ||
+    hasStringValue(opts.azureOpenaiApiVersion)
+  ) {
+    matches.push({
+      optionKey: "azureOpenaiBaseUrl",
+      authChoice: "azure-openai-api-key",
+      label: "--azure-openai-base-url/--azure-openai-model-id[/--azure-openai-api-version]",
+    });
+  }
+
+  if (
     hasStringValue(opts.customBaseUrl) ||
     hasStringValue(opts.customModelId) ||
     hasStringValue(opts.customApiKey)

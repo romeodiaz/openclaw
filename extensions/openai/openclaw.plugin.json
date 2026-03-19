@@ -1,10 +1,25 @@
 {
   "id": "openai",
-  "providers": ["openai", "openai-codex"],
+  "providers": ["azure-openai-responses", "openai", "openai-codex"],
   "providerAuthEnvVars": {
-    "openai": ["OPENAI_API_KEY"]
+    "openai": ["OPENAI_API_KEY"],
+    "azure-openai-responses": ["AZURE_OPENAI_API_KEY"]
   },
   "providerAuthChoices": [
+    {
+      "provider": "azure-openai-responses",
+      "method": "api-key",
+      "choiceId": "azure-openai-api-key",
+      "choiceLabel": "Azure OpenAI API key",
+      "choiceHint": "Azure resource URL + deployment name",
+      "groupId": "openai",
+      "groupLabel": "OpenAI",
+      "groupHint": "Codex OAuth + API key + Azure",
+      "optionKey": "azureOpenaiApiKey",
+      "cliFlag": "--azure-openai-api-key",
+      "cliOption": "--azure-openai-api-key <key>",
+      "cliDescription": "Azure OpenAI API key"
+    },
     {
       "provider": "openai-codex",
       "method": "oauth",

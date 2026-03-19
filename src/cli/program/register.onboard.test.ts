@@ -14,7 +14,7 @@ vi.mock("../../commands/auth-choice-options.static.js", () => ({
 }));
 
 vi.mock("../../commands/auth-choice-options.js", () => ({
-  formatAuthChoiceChoicesForCli: () => "token|oauth|openai-api-key",
+  formatAuthChoiceChoicesForCli: () => "token|oauth|openai-api-key|azure-openai-api-key",
 }));
 
 vi.mock("../../commands/onboard-core-auth-flags.js", () => ({
@@ -29,6 +29,11 @@ vi.mock("../../commands/onboard-core-auth-flags.js", () => ({
 
 vi.mock("../../plugins/provider-auth-choices.js", () => ({
   resolveManifestProviderOnboardAuthFlags: () => [
+    {
+      cliOption: "--azure-openai-api-key <key>",
+      description: "Azure OpenAI API key",
+      optionKey: "azureOpenaiApiKey",
+    },
     {
       cliOption: "--openai-api-key <key>",
       description: "OpenAI API key",
@@ -139,6 +144,29 @@ describe("registerOnboardCommand", () => {
     expect(setupWizardCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         mistralApiKey: "sk-mistral-test", // pragma: allowlist secret
+      }),
+      runtime,
+    );
+  });
+
+  it("forwards Azure OpenAI provider flags", async () => {
+    await runCli([
+      "onboard",
+      "--azure-openai-api-key",
+      "sk-azure-test",
+      "--azure-openai-base-url",
+      "https://example.openai.azure.com",
+      "--azure-openai-model-id",
+      "gpt-5.4",
+      "--azure-openai-api-version",
+      "2025-04-01-preview",
+    ]);
+    expect(setupWizardCommandMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        azureOpenaiApiKey: "sk-azure-test", // pragma: allowlist secret
+        azureOpenaiBaseUrl: "https://example.openai.azure.com",
+        azureOpenaiModelId: "gpt-5.4",
+        azureOpenaiApiVersion: "2025-04-01-preview",
       }),
       runtime,
     );

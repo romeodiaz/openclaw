@@ -98,6 +98,12 @@ export function registerOnboardCommand(program: Command) {
       "--secret-input-mode <mode>",
       "API key persistence mode: plaintext|ref (default: plaintext)",
     )
+    .option("--azure-openai-base-url <url>", "Azure OpenAI base URL")
+    .option("--azure-openai-model-id <id>", "Azure OpenAI deployment name")
+    .option(
+      "--azure-openai-api-version <version>",
+      "Azure OpenAI API version override (default: v1)",
+    )
     .option("--cloudflare-ai-gateway-account-id <id>", "Cloudflare Account ID")
     .option("--cloudflare-ai-gateway-gateway-id <id>", "Cloudflare AI Gateway ID");
 
@@ -163,6 +169,9 @@ export function registerOnboardCommand(program: Command) {
           tokenExpiresIn: opts.tokenExpiresIn as string | undefined,
           secretInputMode: opts.secretInputMode as SecretInputMode | undefined,
           ...providerAuthOptionValues,
+          azureOpenaiBaseUrl: opts.azureOpenaiBaseUrl as string | undefined,
+          azureOpenaiModelId: opts.azureOpenaiModelId as string | undefined,
+          azureOpenaiApiVersion: opts.azureOpenaiApiVersion as string | undefined,
           cloudflareAiGatewayAccountId: opts.cloudflareAiGatewayAccountId as string | undefined,
           cloudflareAiGatewayGatewayId: opts.cloudflareAiGatewayGatewayId as string | undefined,
           customBaseUrl: opts.customBaseUrl as string | undefined,
